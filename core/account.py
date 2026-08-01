@@ -14,8 +14,7 @@ class AccountManager:
         if not check_tdl_installed():
             return False, "TDL engine not installed"
 
-        if not namespace or not namespace.strip():
-            return False, "Not Logged In"
+        ns_to_check = namespace if namespace and namespace.strip() else "default"
 
         if proxy:
             reachable, detail = test_proxy_reachable(proxy, timeout=4.0)
@@ -23,7 +22,7 @@ class AccountManager:
                 return False, f"Proxy unreachable ({proxy})"
 
         try:
-            cmd = ["tdl", "-n", namespace]
+            cmd = ["tdl", "--ns", ns_to_check]
             if proxy:
                 cmd += ["--proxy", proxy]
             cmd += ["chat", "ls", "-f", "false", "-o", "json"]
@@ -56,10 +55,9 @@ class AccountManager:
 
     @staticmethod
     def verify_namespace(namespace: str, proxy: str = "", retries: int = 3) -> bool:
-        if not namespace or not namespace.strip():
-            return False
+        ns_to_check = namespace if namespace and namespace.strip() else "default"
         
-        cmd = ["tdl", "-n", namespace]
+        cmd = ["tdl", "--ns", ns_to_check]
         if proxy:
             cmd += ["--proxy", proxy]
         cmd += ["chat", "ls", "-f", "false", "-o", "json"]
@@ -90,7 +88,7 @@ class AccountManager:
                 save_config(config)
                 return True
 
-        config.namespace = ""
+        config.namespace = "default"
         save_config(config)
         return False
 
@@ -107,7 +105,7 @@ class AccountManager:
                 is_active = f" {ANSI.BRIGHT_GREEN}(Current){ANSI.RESET}" if ns == config.namespace else ""
                 print(f" [{idx}] Switch to: {ns}{is_active}")
             print(f" [{len(detected) + 1}] Create / Login New Namespace")
-            print(f" [{len(detected) + 2}] Login Current Namespace ({config.namespace or 'None'})")
+            print(f" [{len(detected) + 2}] Login Current Namespace ({config.namespace or 'default'})")
             print(f" [{len(detected) + 3}] Back")
             
             choice = input(f"\nSelect Option (1-{len(detected) + 3}): ").strip()
@@ -133,14 +131,7 @@ class AccountManager:
                         return
                     target_ns = new_ns
                 elif idx_val == len(detected) + 2:
-                    if not config.namespace:
-                        target_ns = input("Enter namespace name to login: ").strip()
-                        if not target_ns:
-                            print(f"{ANSI.BRIGHT_RED}Namespace cannot be empty.{ANSI.RESET}")
-                            time.sleep(1)
-                            return
-                    else:
-                        target_ns = config.namespace
+                    target_ns = config.namespace or "default"
                 elif idx_val == len(detected) + 3:
                     return
                 else:
@@ -152,18 +143,17 @@ class AccountManager:
                 time.sleep(1)
                 return
         else:
-            target_ns = input("Enter namespace name for login: ").strip()
+            target_ns = input("Enter namespace name for login (default: 'default'): ").strip()
             if not target_ns:
-                print(f"{ANSI.BRIGHT_RED}Namespace cannot be empty.{ANSI.RESET}")
-                time.sleep(1)
-                return
+                target_ns = "default"
 
         AccountManager._perform_login(target_ns, config)
 
     @staticmethod
     def _perform_login(namespace: str, config: AppConfig):
         os.system("clear")
-        print(f"\n{ANSI.BOLD}{ANSI.BRIGHT_CYAN}🔐 TELEGRAM LOGIN: {namespace}{ANSI.RESET}")
+        target_ns = namespace if namespace and namespace.strip() else "default"
+        print(f"\n{ANSI.BOLD}{ANSI.BRIGHT_CYAN}🔐 TELEGRAM LOGIN: {target_ns}{ANSI.RESET}")
         print(" [1] Login via Phone & OTP Code\n [2] Login via QR Code\n [3] Back")
 
         choice = input(f"\nSelect Mode (1-3): ").strip()
@@ -195,7 +185,8 @@ class AccountManager:
 
             mode_flag = "code" if choice == "1" else "qr"
 
-            cmd = ["tdl", "-n", namespace]
+            # TDL CLI တွင် namespace အတွက် --ns flag သို့မဟုတ် -n flag ကို တိကျစွာသုံးရန် ပြင်ထားသည်
+            cmd = ["tdl", "--ns", target_ns]
             if config.proxy:
                 cmd += ["--proxy", config.proxy]
             cmd += ["login", "-T", mode_flag]
@@ -205,8 +196,8 @@ class AccountManager:
                 if res.returncode == 0:
                     print(f"\n{ANSI.DIM}Validating new session...{ANSI.RESET}")
                     time.sleep(1.5)
-                    if AccountManager.verify_namespace(namespace, config.proxy, retries=3):
-                        config.namespace = namespace
+                    if AccountManager.verify_namespace(target_ns, config.proxy, retries=3):
+                        config.namespace = target_ns
                         save_config(config)
                         print(f"{ANSI.BRIGHT_GREEN}✔ Login successful and namespace saved!{ANSI.RESET}")
                     else:
@@ -224,4 +215,3 @@ class AccountManager:
         elif choice != "3":
             print(f"{ANSI.BRIGHT_RED}Invalid option.{ANSI.RESET}")
             time.sleep(1)
-            
