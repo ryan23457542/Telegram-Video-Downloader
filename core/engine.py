@@ -38,12 +38,42 @@ class DownloadEngine:
         self._last_sample_time: float = 0.0
         self._last_sample_bytes: float = 0.0
 
+    MAX_AUTO_RETRIES = 3
+    RETRY_WAIT_SECONDS = 15
+
     def execute(self) -> bool:
+        """Run the download, automatically retrying a few times on a
+        transient connection failure before giving up (mirrors the
+        auto-retry behaviour that was proven to work well previously)."""
+        attempt = 0
+        while True:
+            outcome = self._run_once()
+            if outcome in ("success", "cancelled"):
+                return outcome == "success"
+
+            attempt += 1
+            if attempt > self.MAX_AUTO_RETRIES:
+                return False
+
+            for remaining in range(self.RETRY_WAIT_SECONDS, 0, -1):
+                if self.stop_event.is_set():
+                    return False
+                self.progress.status_text = (
+                    f"Connection lost - retry {attempt}/{self.MAX_AUTO_RETRIES} in {remaining}s..."
+                )
+                self.dashboard.render(self.progress, self.ping_monitor.get_state())
+                time.sleep(1)
+
+            force_unlock_tdl_database()
+
+    def _run_once(self) -> str:
+        """Run a single tdl download attempt. Returns 'success', 'cancelled', or 'failed'."""
         self.ping_monitor.start()
         cmd = [
             "tdl", "-n", self.config.namespace, "dl", "-u", self.link,
             "-t", str(self.profile.threads), "--pool", str(self.profile.pool),
-            "-d", self.config.download_dir, "--reconnect-timeout", "15s"
+            "-d", self.config.download_dir, "--reconnect-timeout", "15s",
+            "--continue",  # resume a partially-downloaded file instead of restarting from 0
         ]
         if self.config.proxy:
             cmd += ["--proxy", self.config.proxy]
@@ -72,10 +102,11 @@ class DownloadEngine:
                 self.progress.percentage = 100.0
                 self.progress.status_text = "Completed!"
                 self.dashboard.render(self.progress, self.ping_monitor.get_state())
-                return True
+                return "success"
             if self.stop_event.is_set():
                 self.progress.status_text = "Cancelled"
-            return False
+                return "cancelled"
+            return "failed"
         except KeyboardInterrupt:
             # Don't leave an orphaned tdl process running in the background
             self.stop_event.set()
@@ -86,7 +117,7 @@ class DownloadEngine:
                 except subprocess.TimeoutExpired:
                     process.kill()
             self.ping_monitor.stop()
-            return False
+            return "cancelled"
         finally:
             sys.stdout.write(ANSI.SHOW_CURSOR + "\n")
 
