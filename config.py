@@ -7,7 +7,7 @@ CONFIG_FILE = Path.home() / ".telegram_downloader_config.json"
 
 @dataclass
 class AppConfig:
-    namespace: str = ""
+    namespace: str = "default"
     download_dir: str = "/sdcard/Download" if os.path.exists("/sdcard") else str(Path.home() / "Downloads")
     proxy: str = ""
 
@@ -30,4 +30,4 @@ def save_config(config: AppConfig) -> bool:
         return True
     except Exception:
         return False
-    
+                
