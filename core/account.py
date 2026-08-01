@@ -1,13 +1,12 @@
 import sys
 import re
 import subprocess
-from typing import Tuple
 from utils.ansi import ANSI
-from utils.helpers import check_tdl_installed
+from utils.helpers import check_tdl_installed, force_unlock_tdl_database
 
 class AccountManager:
     @staticmethod
-    def get_account_status(namespace: str) -> Tuple[bool, str]:
+    def get_account_status(namespace: str) -> tuple[bool, str]:
         if not check_tdl_installed():
             return False, "TDL engine not installed"
         try:
@@ -25,9 +24,14 @@ class AccountManager:
         sys.stdout.write(ANSI.SHOW_CURSOR)
         print(f"\n{ANSI.BOLD}{ANSI.BRIGHT_CYAN}🔐 TELEGRAM LOGIN MANAGER{ANSI.RESET}")
         print(" [1] Login via Phone & OTP Code\n [2] Login via QR Code\n [3] Back")
+        
         choice = input(f"\nSelect Mode (1-3): ").strip()
         
+        # ⚠️ Login မစမီ Process နဲ့ Lock file များကို အရင်ရှင်းထုတ်မည်
+        force_unlock_tdl_database()
+
         if choice == "1":
             subprocess.run(["tdl", "-n", namespace, "login", "-T", "code"])
         elif choice == "2":
             subprocess.run(["tdl", "-n", namespace, "login", "-T", "qr"])
+            
