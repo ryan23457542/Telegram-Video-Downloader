@@ -54,8 +54,7 @@ class TelegramDownloaderApp:
         print(box.line(f"{ANSI.BOLD}{ANSI.BRIGHT_MAGENTA}TELEGRAM DOWNLOADER{ANSI.RESET} {ANSI.DIM}v7{ANSI.RESET}"))
         print(box.divider())
         print(box.row("Status", status_msg, status_color))
-        if self.config.namespace:
-            print(box.row("Namespace", self.config.namespace, ANSI.BRIGHT_CYAN))
+        print(box.row("Namespace", self.config.namespace or "default", ANSI.BRIGHT_CYAN))
         print(box.row("Path", self.config.download_dir, ANSI.BRIGHT_YELLOW))
         if self.config.proxy:
             print(box.row("Proxy", self.config.proxy, ANSI.BRIGHT_CYAN))
@@ -180,4 +179,4 @@ if __name__ == "__main__":
     finally:
         sys.stdout.write(ANSI.SHOW_CURSOR)
         sys.stdout.flush()
-        
+                      
