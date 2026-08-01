@@ -1,4 +1,5 @@
 import sys
+import os
 import re
 import subprocess
 from utils.ansi import ANSI
@@ -27,11 +28,16 @@ class AccountManager:
         
         choice = input(f"\nSelect Mode (1-3): ").strip()
         
-        # ⚠️ Login မစမီ Process နဲ့ Lock file များကို အရင်ရှင်းထုတ်မည်
-        force_unlock_tdl_database()
-
-        if choice == "1":
-            subprocess.run(["tdl", "-n", namespace, "login", "-T", "code"])
-        elif choice == "2":
-            subprocess.run(["tdl", "-n", namespace, "login", "-T", "qr"])
+        if choice in ["1", "2"]:
+            # Process & Locks ကို အရင်ရှင်းမည်
+            force_unlock_tdl_database()
             
+            # Terminal Screen ကို ရှင်းပြီး TDL Login Prompt သို့ တိုက်ရိုက် လွှဲပေးမည်
+            os.system("clear")
+            login_type = "code" if choice == "1" else "qr"
+            
+            # Direct System Call ဖြင့် Termux Interactive Terminal ကို ခေါ်မည်
+            os.system(f"tdl -n {namespace} login -T {login_type}")
+            
+            input(f"\n{ANSI.BRIGHT_GREEN}Press Enter to return to menu...{ANSI.RESET}")
+        
