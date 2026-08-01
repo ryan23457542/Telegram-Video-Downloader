@@ -1,8 +1,10 @@
 import os
+import socket
 import shutil
 import subprocess
 import time
 from pathlib import Path
+from urllib.parse import urlparse
 
 def format_bytes(size: float) -> str:
     """Format bytes into human readable format."""
@@ -47,4 +49,26 @@ def force_unlock_tdl_database():
                     pass
     except Exception:
         pass
+
+
+def test_proxy_reachable(proxy: str, timeout: float = 4.0):
+    """
+    Quickly test whether a proxy's host:port accepts a raw TCP connection.
+    This does NOT verify the proxy actually forwards traffic correctly
+    (that needs a real SOCKS/HTTP handshake), but it catches the most
+    common failure - a dead/offline proxy - in a few seconds instead of
+    letting tdl hang on it for a minute or more with no feedback.
+    Returns (is_reachable, detail_message).
+    """
+    if not proxy:
+        return True, ""
+    try:
+        parsed = urlparse(proxy)
+        host, port = parsed.hostname, parsed.port
+        if not host or not port:
+            return False, "Could not parse host/port from proxy address"
+        with socket.create_connection((host, port), timeout=timeout):
+            return True, ""
+    except Exception as e:
+        return False, str(e)
     
