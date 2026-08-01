@@ -1,4 +1,4 @@
-default os
+import os
 import json
 from pathlib import Path
 from dataclasses import dataclass, asdict
