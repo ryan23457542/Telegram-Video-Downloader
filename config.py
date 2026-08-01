@@ -9,6 +9,7 @@ CONFIG_FILE = Path.home() / ".telegram_downloader_config.json"
 class AppConfig:
     namespace: str = "default"
     download_dir: str = "/sdcard/Download" if os.path.exists("/sdcard") else str(Path.home() / "Downloads")
+    proxy: str = ""
 
 def load_config() -> AppConfig:
     if CONFIG_FILE.exists():
@@ -27,4 +28,5 @@ def save_config(config: AppConfig):
             json.dump(asdict(config), f, indent=2)
     except Exception:
         pass
-          
+
+            
