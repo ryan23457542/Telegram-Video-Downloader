@@ -1,0 +1,15 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Config & Sensitive Sessions
+.telegram_downloader_config.json
+*.session
+*.session-journal
+.tdl/
+
+# OS / IDE generated files
+.DS_Store
+.vscode/
+.idea/
