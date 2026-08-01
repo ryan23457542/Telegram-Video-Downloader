@@ -5,6 +5,28 @@ from utils.helpers import check_tdl_installed
 from config import load_config, save_config
 from core.account import AccountManager
 from core.engine import DownloadEngine
+import subprocess
+import time
+
+def kill_stale_tdl_processes():
+    """Background မှာ ငြိနေတဲ့ tdl process များကို ရှင်းထုတ်ပေးသည့် function"""
+    try:
+        # Termux/Linux မှာ ပိတ်မကျဘဲ ကျန်နေတဲ့ tdl process အားလုံးကို ရှင်းပစ်မည်
+        subprocess.run(["pkill", "-9", "-f", "tdl"], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+        time.sleep(0.5) # Database lock ပြေသွားအောင် ခဏစောင့်မည်
+    except Exception:
+        pass
+
+class DownloadEngine:
+    def __init__(self, link: str, config: AppConfig):
+        # ... သင်၏ init code များ ...
+        pass
+
+    def execute(self) -> bool:
+        # Download မစတင်မီ tdl process အဟောင်းများကို အရင်ရှင်းထုတ်မည်
+        kill_stale_tdl_processes()
+        
+        # ... ကျန်ရှိသော download code များ ...
 
 class TelegramDownloaderApp:
     def __init__(self):
