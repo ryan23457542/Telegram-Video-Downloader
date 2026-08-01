@@ -153,6 +153,15 @@ class DownloadEngine:
 
             if size_match:
                 self.progress.transferred_bytes = self._to_bytes(float(size_match.group(1)), size_match.group(2))
+                # tdl no longer exposes a way to pre-resolve a link's total
+                # size (see MetadataResolver.parse_link), so back it out from
+                # the transferred-bytes/percentage tdl itself reports and
+                # backfill the dashboard as soon as we have a usable sample.
+                if not self.size_bytes and pct > 0:
+                    estimated_total = self.progress.transferred_bytes / (pct / 100.0)
+                    if estimated_total > 0:
+                        self.size_bytes = estimated_total
+                        self.dashboard.size_bytes = estimated_total
             elif self.size_bytes:
                 self.progress.transferred_bytes = (pct / 100.0) * self.size_bytes
 
@@ -191,3 +200,4 @@ class DownloadEngine:
         if m: total += int(m.group(1)) * 60
         if s: total += int(s.group(1))
         return total
+        
