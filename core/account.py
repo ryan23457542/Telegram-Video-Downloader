@@ -3,6 +3,7 @@ import os
 import re
 import time
 import subprocess
+from pathlib import Path
 from utils.ansi import ANSI
 from utils.helpers import check_tdl_installed, force_unlock_tdl_database, test_proxy_reachable
 from ui.box import Spinner
@@ -13,24 +14,36 @@ class AccountManager:
         if not check_tdl_installed():
             return False, "TDL engine not installed"
 
+        # Fast local pre-check: if tdl has never created its storage at all,
+        # no namespace could possibly be logged in yet - skip the network
+        # round-trip entirely.
+        if not (Path.home() / ".tdl" / "data").exists():
+            return False, "Not Logged In"
+
         if proxy:
             reachable, detail = test_proxy_reachable(proxy, timeout=4.0)
             if not reachable:
                 return False, f"Proxy unreachable ({proxy})"
 
         try:
+            # NOTE: there is no "tdl user me" command in tdl - it doesn't
+            # exist in the CLI (only login/dl/up/chat/backup/recover/
+            # extension do). Using it always failed silently and made this
+            # check useless. "chat ls" with a filter that matches nothing
+            # is a real, documented, lightweight way to test a session:
+            # it still requires successful auth to run, but returns
+            # instantly without listing any real data.
             cmd = ["tdl", "-n", namespace]
             if proxy:
                 cmd += ["--proxy", proxy]
-            cmd += ["user", "me"]
+            cmd += ["chat", "ls", "-f", "false", "-o", "json"]
             with Spinner("Checking account status..."):
-                res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=8)
-            if res.returncode == 0 and res.stdout.strip():
-                match = re.search(r"(?:ID|Name|Phone):\s*(.+)", res.stdout)
-                return True, match.group(1).strip() if match else "Logged In"
+                res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=10)
+            if res.returncode == 0:
+                return True, "Logged In"
             if "timeout" in (res.stderr or "").lower():
                 return False, "Connection timeout (check proxy/network)"
-            return False, "Not Logged In"
+            return False, "Not Logged In / Session Expired"
         except subprocess.TimeoutExpired:
             return False, "Connection timeout (check proxy/network)"
         except Exception:
