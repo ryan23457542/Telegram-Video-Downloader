@@ -9,24 +9,29 @@ from ui.box import Spinner
 
 class AccountManager:
     @staticmethod
-    def get_account_status(namespace: str) -> tuple[bool, str]:
+    def get_account_status(namespace: str, proxy: str = "") -> tuple[bool, str]:
         if not check_tdl_installed():
             return False, "TDL engine not installed"
         try:
-            cmd = ["tdl", "-n", namespace, "user", "me"]
+            cmd = ["tdl", "-n", namespace]
+            if proxy:
+                cmd += ["--proxy", proxy]
+            cmd += ["user", "me"]
             with Spinner("Checking account status..."):
-                res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5)
+                res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=8)
             if res.returncode == 0 and res.stdout.strip():
                 match = re.search(r"(?:ID|Name|Phone):\s*(.+)", res.stdout)
                 return True, match.group(1).strip() if match else "Logged In"
+            if "timeout" in (res.stderr or "").lower():
+                return False, "Connection timeout (try setting a proxy)"
             return False, "Not Logged In"
         except subprocess.TimeoutExpired:
-            return False, "Session Status Unknown (timeout)"
+            return False, "Connection timeout (try setting a proxy)"
         except Exception:
             return False, "Session Status Unknown"
 
     @staticmethod
-    def login_menu(namespace: str):
+    def login_menu(namespace: str, proxy: str = ""):
         os.system("clear")
         sys.stdout.write(ANSI.SHOW_CURSOR)
         print(f"\n{ANSI.BOLD}{ANSI.BRIGHT_CYAN}🔐 TELEGRAM LOGIN MANAGER{ANSI.RESET}")
@@ -40,6 +45,8 @@ class AccountManager:
 
             os.system("clear")
             print(f"{ANSI.BRIGHT_YELLOW}Starting Telegram Login...{ANSI.RESET}\n")
+            if proxy:
+                print(f"{ANSI.DIM}Using proxy: {proxy}{ANSI.RESET}\n")
 
             # Mode 1 အတွက် -T code (Phone/OTP)
             # Mode 2 အတွက် -T qr (QR Code Scan)
@@ -47,7 +54,10 @@ class AccountManager:
 
             # Use an argument list (not a shell string) so namespace can
             # never be interpreted as shell syntax.
-            cmd = ["tdl", "-n", namespace, "login", "-T", mode_flag]
+            cmd = ["tdl", "-n", namespace]
+            if proxy:
+                cmd += ["--proxy", proxy]
+            cmd += ["login", "-T", mode_flag]
             try:
                 subprocess.run(cmd)
             except FileNotFoundError:
@@ -59,3 +69,4 @@ class AccountManager:
         elif choice != "3":
             print(f"{ANSI.BRIGHT_RED}Invalid option.{ANSI.RESET}")
             time.sleep(1)
+                
