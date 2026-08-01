@@ -18,9 +18,8 @@ LINK_PATTERN = re.compile(r"^(https?://)?t\.me/", re.IGNORECASE)
 def kill_stale_tdl_processes():
     """Background မှာ ငြိနေတဲ့ tdl process များကို ရှင်းထုတ်ပေးသည့် function"""
     try:
-        # Termux/Linux မှာ ပိတ်မကျဘဲ ကျန်နေတဲ့ tdl process အားလုံးကို ရှင်းပစ်မည်
         subprocess.run(["pkill", "-9", "-f", "tdl"], stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
-        time.sleep(0.5)  # Database lock ပြေသွားအောင် ခဏစောင့်မည်
+        time.sleep(0.5)
     except Exception:
         pass
 
@@ -55,6 +54,8 @@ class TelegramDownloaderApp:
         print(box.line(f"{ANSI.BOLD}{ANSI.BRIGHT_MAGENTA}TELEGRAM DOWNLOADER{ANSI.RESET} {ANSI.DIM}v7{ANSI.RESET}"))
         print(box.divider())
         print(box.row("Status", status_msg, status_color))
+        if self.config.namespace:
+            print(box.row("Namespace", self.config.namespace, ANSI.BRIGHT_CYAN))
         print(box.row("Path", self.config.download_dir, ANSI.BRIGHT_YELLOW))
         if self.config.proxy:
             print(box.row("Proxy", self.config.proxy, ANSI.BRIGHT_CYAN))
@@ -103,7 +104,7 @@ class TelegramDownloaderApp:
         if not logged_in:
             print(f"{ANSI.BRIGHT_RED}You must log in first.{ANSI.RESET}")
             time.sleep(1.2)
-            AccountManager.login_menu(self.config.namespace, self.config.proxy)
+            AccountManager.login_menu(self.config)
             return
 
         link = input("Enter Telegram Link: ").strip()
@@ -142,6 +143,8 @@ class TelegramDownloaderApp:
         kill_stale_tdl_processes()
         show_startup_banner()
 
+        AccountManager.auto_detect_and_load(self.config)
+
         while True:
             logged_in, status_msg = AccountManager.get_account_status(self.config.namespace, self.config.proxy)
             self.render_menu(logged_in, status_msg)
@@ -151,7 +154,7 @@ class TelegramDownloaderApp:
             if choice == "1":
                 self.handle_download(logged_in)
             elif choice == "2":
-                AccountManager.login_menu(self.config.namespace, self.config.proxy)
+                AccountManager.login_menu(self.config)
             elif choice == "3":
                 self.change_download_folder()
             elif choice == "4":
@@ -177,3 +180,4 @@ if __name__ == "__main__":
     finally:
         sys.stdout.write(ANSI.SHOW_CURSOR)
         sys.stdout.flush()
+                    
