@@ -8,7 +8,7 @@ from utils.ping import PingMonitor
 from config import AppConfig
 from core.resolver import MetadataResolver
 from ui.dashboard import LiveDashboard, DownloadProgress
-from utils.helpers import force_unlock_tdl_database
+from utils.helpers import force_unlock_tdl_database, test_proxy_reachable
 from ui.box import Spinner
 
 
@@ -19,10 +19,15 @@ class DownloadEngine:
         self.stop_event = threading.Event()
         self.progress = DownloadProgress()
         self.lock = threading.Lock()
-        
+
         # Stale locks from a previous crashed/killed run would silently
         # block every new download - clear them before we touch tdl at all.
         force_unlock_tdl_database()
+
+        if config.proxy:
+            reachable, detail = test_proxy_reachable(config.proxy, timeout=5.0)
+            if not reachable:
+                raise RuntimeError(f"Proxy '{config.proxy}' is unreachable ({detail}). Try a different proxy.")
 
         with Spinner("Resolving link metadata..."):
             self.size_bytes, self.file_name = MetadataResolver.parse_link(link, config.namespace, config.proxy)
@@ -100,31 +105,58 @@ class DownloadEngine:
         pct_match = re.search(r"([\d\.]+)%", line)
         if not pct_match:
             return
-
         pct = min(100.0, max(0.0, float(pct_match.group(1))))
+
+        # tdl's progress line often looks like:
+        # "45.5% [140.00 MB in 5m14s; ETA: 42m26s; 455.5 KB/s]"
+        # Prefer these explicit fields when present - they're exact,
+        # not estimated from timing between our own polls.
+        size_match = re.search(r"\[([\d\.]+)\s*([KMGT]?B)\b", line)
+        speed_match = re.search(r"([\d\.]+)\s*([KMGT]?B)/s", line)
+        eta_match = re.search(r"ETA:\s*([\dhms]+)", line)
+
         now = time.time()
-        transferred = (pct / 100.0) * self.size_bytes if self.size_bytes else 0.0
-
         with self.lock:
-            if self._last_sample_time > 0:
-                dt = now - self._last_sample_time
-                if dt >= 0.2:  # smooth out noisy instantaneous readings
-                    speed = (transferred - self._last_sample_bytes) / dt
-                    if speed >= 0:
-                        self.progress.speed_bytes_sec = speed
-                    self._last_sample_time = now
-                    self._last_sample_bytes = transferred
-            else:
-                self._last_sample_time = now
-                self._last_sample_bytes = transferred
-
             self.progress.percentage = pct
-            self.progress.transferred_bytes = transferred
             self.progress.status_text = "Downloading..."
 
-            if self.progress.speed_bytes_sec > 0 and self.size_bytes:
-                remaining = max(0.0, self.size_bytes - transferred)
+            if size_match:
+                self.progress.transferred_bytes = self._to_bytes(float(size_match.group(1)), size_match.group(2))
+            elif self.size_bytes:
+                self.progress.transferred_bytes = (pct / 100.0) * self.size_bytes
+
+            if speed_match:
+                self.progress.speed_bytes_sec = self._to_bytes(float(speed_match.group(1)), speed_match.group(2))
+            elif self._last_sample_time > 0:
+                dt = now - self._last_sample_time
+                if dt >= 0.2:
+                    speed = (self.progress.transferred_bytes - self._last_sample_bytes) / dt
+                    if speed >= 0:
+                        self.progress.speed_bytes_sec = speed
+
+            if eta_match:
+                self.progress.eta_seconds = self._parse_eta(eta_match.group(1))
+            elif self.progress.speed_bytes_sec > 0 and self.size_bytes:
+                remaining = max(0.0, self.size_bytes - self.progress.transferred_bytes)
                 self.progress.eta_seconds = remaining / self.progress.speed_bytes_sec
             else:
                 self.progress.eta_seconds = 0.0
-        
+
+            self._last_sample_time = now
+            self._last_sample_bytes = self.progress.transferred_bytes
+
+    @staticmethod
+    def _to_bytes(value: float, unit: str) -> float:
+        units = {"B": 1, "KB": 1024, "MB": 1024 ** 2, "GB": 1024 ** 3, "TB": 1024 ** 4}
+        return value * units.get(unit.upper(), 1)
+
+    @staticmethod
+    def _parse_eta(eta_str: str) -> float:
+        total = 0.0
+        h = re.search(r"(\d+)h", eta_str)
+        m = re.search(r"(\d+)m", eta_str)
+        s = re.search(r"(\d+)s", eta_str)
+        if h: total += int(h.group(1)) * 3600
+        if m: total += int(m.group(1)) * 60
+        if s: total += int(s.group(1))
+        return total
