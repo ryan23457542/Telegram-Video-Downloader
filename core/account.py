@@ -29,15 +29,22 @@ class AccountManager:
         choice = input(f"\nSelect Mode (1-3): ").strip()
         
         if choice in ["1", "2"]:
-            # Process & Locks ကို အရင်ရှင်းမည်
+            # Database lock များကို အရင်ရှင်းထုတ်မည်
             force_unlock_tdl_database()
             
-            # Terminal Screen ကို ရှင်းပြီး TDL Login Prompt သို့ တိုက်ရိုက် လွှဲပေးမည်
-            os.system("clear")
             login_type = "code" if choice == "1" else "qr"
             
-            # Direct System Call ဖြင့် Termux Interactive Terminal ကို ခေါ်မည်
-            os.system(f"tdl -n {namespace} login -T {login_type}")
+            # Terminal ကို ရှင်းပြီး Direct TDL Command သို့ တိုက်ရိုက် လွှဲပေးမည်
+            os.system("clear")
+            print(f"{ANSI.BRIGHT_YELLOW}Connecting to Telegram Server...{ANSI.RESET}\n")
             
+            # --type code အတိုင်း တိုက်ရိုက် run ပေးမည်
+            cmd = f"tdl -n {namespace} login --type {login_type}"
+            exit_code = os.system(cmd)
+            
+            if exit_code != 0:
+                # အကယ်၍ --type အဆင်မပြေပါက -T ဖြင့် fallback ပြန်စမ်းမည်
+                os.system(f"tdl -n {namespace} login -T {login_type}")
+
             input(f"\n{ANSI.BRIGHT_GREEN}Press Enter to return to menu...{ANSI.RESET}")
-        
+            
