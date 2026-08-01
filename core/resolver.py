@@ -11,8 +11,11 @@ class DownloadProfile:
 
 class MetadataResolver:
     @staticmethod
-    def parse_link(link: str, namespace: str) -> Tuple[Optional[int], str]:
-        cmd = ["tdl", "-n", namespace, "url", "parse", "-u", link, "--json"]
+    def parse_link(link: str, namespace: str, proxy: str = "") -> Tuple[Optional[int], str]:
+        cmd = ["tdl", "-n", namespace]
+        if proxy:
+            cmd += ["--proxy", proxy]
+        cmd += ["url", "parse", "-u", link, "--json"]
         try:
             res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=10)
             if res.returncode == 0 and res.stdout:
@@ -32,3 +35,4 @@ class MetadataResolver:
         elif size_mb < 250: return DownloadProfile("High-Speed Mode", 8, 8)
         elif size_mb < 1024: return DownloadProfile("Turbo Extreme Mode", 16, 16)
         return DownloadProfile("Ultra Large File Engine", 24, 24)
+                                 
