@@ -29,22 +29,17 @@ class AccountManager:
         choice = input(f"\nSelect Mode (1-3): ").strip()
         
         if choice in ["1", "2"]:
-            # Database lock များကို အရင်ရှင်းထုတ်မည်
+            # Process & Locks အကုန်သတ်မည်
             force_unlock_tdl_database()
             
-            login_type = "code" if choice == "1" else "qr"
-            
-            # Terminal ကို ရှင်းပြီး Direct TDL Command သို့ တိုက်ရိုက် လွှဲပေးမည်
             os.system("clear")
-            print(f"{ANSI.BRIGHT_YELLOW}Connecting to Telegram Server...{ANSI.RESET}\n")
+            print(f"{ANSI.BRIGHT_YELLOW}Starting Telegram Login...{ANSI.RESET}\n")
             
-            # --type code အတိုင်း တိုက်ရိုက် run ပေးမည်
-            cmd = f"tdl -n {namespace} login --type {login_type}"
-            exit_code = os.system(cmd)
-            
-            if exit_code != 0:
-                # အကယ်၍ --type အဆင်မပြေပါက -T ဖြင့် fallback ပြန်စမ်းမည်
-                os.system(f"tdl -n {namespace} login -T {login_type}")
+            # Interactive Terminal တိုက်ရိုက်ပွင့်ရန် Flag များ ဖြုတ်ပြီး ခေါ်ပါမည်
+            if choice == "1":
+                os.system("tdl login")
+            else:
+                os.system("tdl login -T qr")
 
-            input(f"\n{ANSI.BRIGHT_GREEN}Press Enter to return to menu...{ANSI.RESET}")
+            input(f"\n{ANSI.BRIGHT_GREEN}Press Enter to return to main menu...{ANSI.RESET}")
             
