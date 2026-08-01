@@ -56,11 +56,14 @@ class TelegramDownloaderApp:
         print(box.divider())
         print(box.row("Status", status_msg, status_color))
         print(box.row("Path", self.config.download_dir, ANSI.BRIGHT_YELLOW))
+        if self.config.proxy:
+            print(box.row("Proxy", self.config.proxy, ANSI.BRIGHT_CYAN))
         print(box.divider())
         print(box.line(f"{ANSI.BRIGHT_WHITE}[1]{ANSI.RESET} Download Link"))
         print(box.line(f"{ANSI.BRIGHT_WHITE}[2]{ANSI.RESET} Login / Switch Account"))
         print(box.line(f"{ANSI.BRIGHT_WHITE}[3]{ANSI.RESET} Change Download Folder"))
-        print(box.line(f"{ANSI.BRIGHT_WHITE}[4]{ANSI.RESET} Exit"))
+        print(box.line(f"{ANSI.BRIGHT_WHITE}[4]{ANSI.RESET} Set Proxy (connection issues)"))
+        print(box.line(f"{ANSI.BRIGHT_WHITE}[5]{ANSI.RESET} Exit"))
         print(box.bottom())
 
     def change_download_folder(self):
@@ -80,11 +83,27 @@ class TelegramDownloaderApp:
         print(f"{ANSI.BRIGHT_GREEN}Download folder updated.{ANSI.RESET}")
         pause()
 
+    def change_proxy(self):
+        current = self.config.proxy or "(none)"
+        print(f"\n{ANSI.BRIGHT_CYAN}Current proxy:{ANSI.RESET} {current}")
+        print(f"{ANSI.DIM}Format: socks5://host:port  or  http://host:port")
+        print(f"Leave empty to clear, or type 'cancel' to keep it as-is.{ANSI.RESET}")
+        new_proxy = input("Enter proxy address: ").strip()
+        if new_proxy.lower() == "cancel":
+            return
+        self.config.proxy = new_proxy
+        save_config(self.config)
+        if new_proxy:
+            print(f"{ANSI.BRIGHT_GREEN}Proxy set to: {new_proxy}{ANSI.RESET}")
+        else:
+            print(f"{ANSI.BRIGHT_GREEN}Proxy cleared.{ANSI.RESET}")
+        pause()
+
     def handle_download(self, logged_in: bool):
         if not logged_in:
             print(f"{ANSI.BRIGHT_RED}You must log in first.{ANSI.RESET}")
             time.sleep(1.2)
-            AccountManager.login_menu(self.config.namespace)
+            AccountManager.login_menu(self.config.namespace, self.config.proxy)
             return
 
         link = input("Enter Telegram Link: ").strip()
@@ -124,23 +143,25 @@ class TelegramDownloaderApp:
         show_startup_banner()
 
         while True:
-            logged_in, status_msg = AccountManager.get_account_status(self.config.namespace)
+            logged_in, status_msg = AccountManager.get_account_status(self.config.namespace, self.config.proxy)
             self.render_menu(logged_in, status_msg)
 
-            choice = input("Select Option (1-4): ").strip()
+            choice = input("Select Option (1-5): ").strip()
 
             if choice == "1":
                 self.handle_download(logged_in)
             elif choice == "2":
-                AccountManager.login_menu(self.config.namespace)
+                AccountManager.login_menu(self.config.namespace, self.config.proxy)
             elif choice == "3":
                 self.change_download_folder()
             elif choice == "4":
+                self.change_proxy()
+            elif choice == "5":
                 os.system("clear")
                 typewriter(f"{ANSI.BRIGHT_CYAN}Goodbye! 👋{ANSI.RESET}", delay=0.02)
                 break
             else:
-                print(f"{ANSI.BRIGHT_RED}Invalid option, please choose 1-4.{ANSI.RESET}")
+                print(f"{ANSI.BRIGHT_RED}Invalid option, please choose 1-5.{ANSI.RESET}")
                 time.sleep(1)
 
 
@@ -156,3 +177,4 @@ if __name__ == "__main__":
     finally:
         sys.stdout.write(ANSI.SHOW_CURSOR)
         sys.stdout.flush()
+        
