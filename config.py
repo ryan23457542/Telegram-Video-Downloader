@@ -1,4 +1,4 @@
-import os
+default os
 import json
 from pathlib import Path
 from dataclasses import dataclass, asdict
@@ -7,7 +7,7 @@ CONFIG_FILE = Path.home() / ".telegram_downloader_config.json"
 
 @dataclass
 class AppConfig:
-    namespace: str = "default"
+    namespace: str = "test"
     download_dir: str = "/sdcard/Download" if os.path.exists("/sdcard") else str(Path.home() / "Downloads")
     proxy: str = ""
 
