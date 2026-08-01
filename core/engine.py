@@ -25,7 +25,7 @@ class DownloadEngine:
         force_unlock_tdl_database()
 
         with Spinner("Resolving link metadata..."):
-            self.size_bytes, self.file_name = MetadataResolver.parse_link(link, config.namespace)
+            self.size_bytes, self.file_name = MetadataResolver.parse_link(link, config.namespace, config.proxy)
         self.profile = MetadataResolver.select_profile(self.size_bytes)
 
         self.ping_monitor = PingMonitor()
@@ -40,6 +40,8 @@ class DownloadEngine:
             "-t", str(self.profile.threads), "--pool", str(self.profile.pool),
             "-d", self.config.download_dir, "--reconnect-timeout", "15s"
         ]
+        if self.config.proxy:
+            cmd += ["--proxy", self.config.proxy]
 
         sys.stdout.write(ANSI.CLEAR_SCREEN + ANSI.HIDE_CURSOR)
         sys.stdout.flush()
@@ -125,3 +127,4 @@ class DownloadEngine:
                 self.progress.eta_seconds = remaining / self.progress.speed_bytes_sec
             else:
                 self.progress.eta_seconds = 0.0
+        
