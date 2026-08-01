@@ -29,17 +29,19 @@ class AccountManager:
         choice = input(f"\nSelect Mode (1-3): ").strip()
         
         if choice in ["1", "2"]:
-            # Process & Locks အကုန်သတ်မည်
+            # Process နဲ့ Lock များ ရှင်းထုတ်မည်
             force_unlock_tdl_database()
             
             os.system("clear")
             print(f"{ANSI.BRIGHT_YELLOW}Starting Telegram Login...{ANSI.RESET}\n")
             
-            # Interactive Terminal တိုက်ရိုက်ပွင့်ရန် Flag များ ဖြုတ်ပြီး ခေါ်ပါမည်
-            if choice == "1":
-                os.system("tdl login")
-            else:
-                os.system("tdl login -T qr")
+            # Mode 1 အတွက် -T code (Phone/OTP)
+            # Mode 2 အတွက် -T qr (QR Code Scan)
+            mode_flag = "code" if choice == "1" else "qr"
+            
+            # -n {namespace} ရော -T {mode_flag} ရော ပါမှ Termux မှာ အဆင်ပြေမည်
+            cmd = f"tdl -n {namespace} login -T {mode_flag}"
+            os.system(cmd)
 
             input(f"\n{ANSI.BRIGHT_GREEN}Press Enter to return to main menu...{ANSI.RESET}")
             
