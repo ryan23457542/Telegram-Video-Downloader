@@ -117,7 +117,7 @@ class TelegramDownloaderApp:
         try:
             engine = DownloadEngine(link, self.config)
         except Exception as e:
-            print(f"{ANSI.BRIGHT_RED}Failed to resolve link: {e}{ANSI.RESET}")
+            print(f"{ANSI.BRIGHT_RED}Error: {e}{ANSI.RESET}")
             pause()
             return
 
@@ -177,4 +177,3 @@ if __name__ == "__main__":
     finally:
         sys.stdout.write(ANSI.SHOW_CURSOR)
         sys.stdout.flush()
-        
