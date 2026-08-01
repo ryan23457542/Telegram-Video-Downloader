@@ -55,22 +55,26 @@ class AccountManager:
         return sorted(namespaces)
 
     @staticmethod
-    def verify_namespace(namespace: str, proxy: str = "") -> bool:
+    def verify_namespace(namespace: str, proxy: str = "", retries: int = 3) -> bool:
         if not namespace or not namespace.strip():
             return False
-        
-        force_unlock_tdl_database()
         
         cmd = ["tdl", "-n", namespace]
         if proxy:
             cmd += ["--proxy", proxy]
         cmd += ["chat", "ls", "-f", "false", "-o", "json"]
         
-        try:
-            res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=10)
-            return res.returncode == 0
-        except Exception:
-            return False
+        for attempt in range(retries):
+            force_unlock_tdl_database()
+            try:
+                res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=12)
+                if res.returncode == 0:
+                    return True
+            except Exception:
+                pass
+            if attempt < retries - 1:
+                time.sleep(1.5)
+        return False
 
     @staticmethod
     def auto_detect_and_load(config: AppConfig) -> bool:
@@ -200,7 +204,8 @@ class AccountManager:
                 res = subprocess.run(cmd)
                 if res.returncode == 0:
                     print(f"\n{ANSI.DIM}Validating new session...{ANSI.RESET}")
-                    if AccountManager.verify_namespace(namespace, config.proxy):
+                    time.sleep(1.5)
+                    if AccountManager.verify_namespace(namespace, config.proxy, retries=3):
                         config.namespace = namespace
                         save_config(config)
                         print(f"{ANSI.BRIGHT_GREEN}✔ Login successful and namespace saved!{ANSI.RESET}")
