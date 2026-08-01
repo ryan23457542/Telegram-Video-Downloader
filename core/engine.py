@@ -8,6 +8,19 @@ from utils.ping import PingMonitor
 from config import AppConfig
 from core.resolver import MetadataResolver
 from ui.dashboard import LiveDashboard, DownloadProgress
+from utils.helpers import force_unlock_tdl_database
+
+class DownloadEngine:
+    def __init__(self, link: str, config: AppConfig):
+        # ... သင်၏ init code များ ...
+        pass
+
+    def execute(self) -> bool:
+        # Download မစခင် Process နဲ့ Lock file ရှင်းမည်
+        force_unlock_tdl_database()
+        
+        # ... ကျန်ရှိသော download execution code များ ...
+
 
 class DownloadEngine:
     def __init__(self, link: str, config: AppConfig):
