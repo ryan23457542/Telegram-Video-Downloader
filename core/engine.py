@@ -82,6 +82,10 @@ class DownloadEngine:
             "-t", str(self.profile.threads), "--pool", str(self.profile.pool),
             "-d", self.config.download_dir, "--reconnect-timeout", "15s",
             "--continue",  # resume a partially-downloaded file instead of restarting from 0
+            "--disable-progress-ps",  # tdl's fancier progress renderer can hang/garble on
+            # terminals like Termux's - this is tdl's own documented flag for that
+            # exact case ("disable progress ps, which may cause display issues in
+            # some terminals"), which matches the frozen "[....." output we saw.
         ]
         if self.config.proxy:
             cmd += ["--proxy", self.config.proxy]
@@ -213,4 +217,4 @@ class DownloadEngine:
         if m: total += int(m.group(1)) * 60
         if s: total += int(s.group(1))
         return total
-                
+            
