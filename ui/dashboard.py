@@ -5,7 +5,7 @@ from typing import Optional
 
 from utils.ansi import ANSI
 from utils.helpers import format_bytes, format_time, get_terminal_width
-from utils.text import pad_right
+from utils.text import pad_right, truncate
 from utils.ping import NetworkState
 from core.resolver import DownloadProfile
 
@@ -18,6 +18,7 @@ class DownloadProgress:
     speed_bytes_sec: float = 0.0
     eta_seconds: float = 0.0
     status_text: str = "Initializing..."
+    last_line: str = ""
 
 
 class LiveDashboard:
@@ -61,6 +62,7 @@ class LiveDashboard:
             self._format_bar_row(progress.percentage, box_width),
             self._format_row("Progress", f"{transferred_str} / {total_str} ({progress.percentage:.1f}%)", ANSI.BRIGHT_WHITE, box_width),
             self._format_row("Status", f"{spinner} {progress.status_text}", ANSI.BRIGHT_WHITE, box_width),
+            self._format_row("tdl says", truncate(progress.last_line or "(no output yet)", max(10, inner_width - 14)), ANSI.DIM, box_width),
             f"{ANSI.BRIGHT_CYAN}╚{'═' * (box_width - 2)}╝{ANSI.RESET}",
         ]
 
@@ -86,3 +88,4 @@ class LiveDashboard:
         content = f"  [{bar}] {pct:5.1f}%"
         body = pad_right(content, inner_width)
         return f"{ANSI.BRIGHT_CYAN}║{ANSI.RESET}{body}{ANSI.BRIGHT_CYAN}║{ANSI.RESET}"
+                      
