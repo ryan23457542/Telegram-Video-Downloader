@@ -25,7 +25,7 @@ class AccountManager:
             cmd = ["tdl", "--ns", ns_to_check]
             if proxy:
                 cmd += ["--proxy", proxy]
-            cmd += ["chat", "ls", "-f", "false", "-o", "json", "--disable-progress-ps"]
+            cmd += ["chat", "ls", "-f", "false", "-o", "json"]
             with Spinner("Checking account status..."):
                 res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=10)
             if res.returncode == 0:
@@ -61,7 +61,7 @@ class AccountManager:
         cmd = ["tdl", "--ns", ns_to_check]
         if proxy:
             cmd += ["--proxy", proxy]
-        cmd += ["chat", "ls", "-f", "false", "-o", "json", "--disable-progress-ps"]
+        cmd += ["chat", "ls", "-f", "false", "-o", "json"]
         
         for attempt in range(retries):
             force_unlock_tdl_database()
@@ -190,7 +190,7 @@ class AccountManager:
             cmd = ["tdl", "--ns", target_ns]
             if config.proxy:
                 cmd += ["--proxy", config.proxy]
-            cmd += ["login", "-T", mode_flag, "--disable-progress-ps"]
+            cmd += ["login", "-T", mode_flag]
             
             try:
                 res = subprocess.run(cmd)
@@ -216,4 +216,4 @@ class AccountManager:
         elif choice != "3":
             print(f"{ANSI.BRIGHT_RED}Invalid option.{ANSI.RESET}")
             time.sleep(1)
-            
+                
