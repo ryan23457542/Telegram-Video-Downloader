@@ -4,7 +4,7 @@ import time
 import subprocess
 from pathlib import Path
 from utils.ansi import ANSI
-from utils.helpers import check_tdl_installed, force_unlock_tdl_database, test_proxy_reachable
+from utils.helpers import check_tdl_installed, force_unlock_tdl_database, test_proxy_reachable, last_meaningful_line
 from ui.box import Spinner
 from config import AppConfig, save_config
 
@@ -32,7 +32,8 @@ class AccountManager:
                 return True, "Logged In"
             if "timeout" in (res.stderr or "").lower():
                 return False, "Connection timeout (check proxy/network)"
-            return False, "Not Logged In / Session Expired"
+            reason = last_meaningful_line(res.stderr)
+            return False, f"Not Logged In ({reason})" if reason else "Not Logged In / Session Expired"
         except subprocess.TimeoutExpired:
             return False, "Connection timeout (check proxy/network)"
         except Exception:
@@ -215,3 +216,4 @@ class AccountManager:
         elif choice != "3":
             print(f"{ANSI.BRIGHT_RED}Invalid option.{ANSI.RESET}")
             time.sleep(1)
+    
