@@ -5,6 +5,7 @@ import subprocess
 import time
 from pathlib import Path
 from urllib.parse import urlparse
+from utils.text import strip_ansi
 
 def format_bytes(size: float) -> str:
     """Format bytes into human readable format."""
@@ -71,4 +72,24 @@ def test_proxy_reachable(proxy: str, timeout: float = 4.0):
             return True, ""
     except Exception as e:
         return False, str(e)
+
+
+def last_meaningful_line(text: str, max_len: int = 80) -> str:
+    """
+    Pull the last non-empty, non-noise line out of tdl's raw stdout/stderr
+    so failures can show the *real* reason tdl gave instead of a guessed
+    generic label like "Connection lost" or "Not Logged In". Without this,
+    every failure - a bad namespace, a private/inaccessible chat, an auth
+    error, an actual network drop, anything - looked identical to the user.
+    """
+    if not text:
+        return ""
+    noise_prefixes = ("cpu:", "memory:", "goroutines:")
+    for raw_line in reversed(text.splitlines()):
+        line = strip_ansi(raw_line).strip()
+        if not line or line.lower().startswith(noise_prefixes):
+            continue
+        return line[:max_len] + ("…" if len(line) > max_len else "")
+    return ""
+
     
