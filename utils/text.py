@@ -37,3 +37,22 @@ def pad_right(text: str, target_width: int) -> str:
     visible width matches target_width."""
     padding = max(0, target_width - visible_width(text))
     return text + (" " * padding)
+
+
+def truncate(text: str, max_width: int) -> str:
+    """Truncate (ANSI-stripped) text to at most max_width visible columns,
+    appending an ellipsis if anything had to be cut. Used to safely fit
+    arbitrary captured tdl output into a fixed-width dashboard row instead
+    of letting it overflow the box border."""
+    plain = strip_ansi(text)
+    if visible_width(plain) <= max_width or max_width <= 1:
+        return plain[:max_width] if max_width <= 1 else plain
+    out, width = [], 0
+    for ch in plain:
+        w = 2 if _WIDE_RE.match(ch) else 1
+        if width + w > max_width - 1:
+            break
+        out.append(ch)
+        width += w
+    return "".join(out) + "…"
+    
