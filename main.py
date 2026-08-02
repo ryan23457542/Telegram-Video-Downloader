@@ -129,7 +129,9 @@ class TelegramDownloaderApp:
         if success:
             print(f"\n{ANSI.BRIGHT_GREEN}✔ Download completed successfully!{ANSI.RESET}")
         else:
-            print(f"\n{ANSI.BRIGHT_RED}✘ Download did not complete.{ANSI.RESET}")
+            reason = getattr(engine, "last_failure_reason", "")
+            suffix = f" ({reason})" if reason else ""
+            print(f"\n{ANSI.BRIGHT_RED}✘ Download did not complete.{suffix}{ANSI.RESET}")
         pause()
 
     def run(self):
@@ -179,4 +181,5 @@ if __name__ == "__main__":
     finally:
         sys.stdout.write(ANSI.SHOW_CURSOR)
         sys.stdout.flush()
-                      
+
+        
