@@ -49,7 +49,7 @@ class DownloadEngine:
         auto-retry behaviour that was proven to work well previously)."""
         attempt = 0
         while True:
-            outcome = self._run_once()
+            outcome = self._run_once(is_retry=attempt > 0)
             if outcome in ("success", "cancelled"):
                 return outcome == "success"
 
@@ -74,19 +74,21 @@ class DownloadEngine:
 
             force_unlock_tdl_database()
 
-    def _run_once(self) -> str:
+    def _run_once(self, is_retry: bool = False) -> str:
         """Run a single tdl download attempt. Returns 'success', 'cancelled', or 'failed'."""
         self.ping_monitor.start()
         cmd = [
             "tdl", "-n", self.config.namespace, "dl", "-u", self.link,
             "-t", str(self.profile.threads), "--pool", str(self.profile.pool),
             "-d", self.config.download_dir, "--reconnect-timeout", "15s",
-            "--continue",  # resume a partially-downloaded file instead of restarting from 0
-            "--disable-progress-ps",  # tdl's fancier progress renderer can hang/garble on
-            # terminals like Termux's - this is tdl's own documented flag for that
-            # exact case ("disable progress ps, which may cause display issues in
-            # some terminals"), which matches the frozen "[....." output we saw.
         ]
+        if is_retry:
+            # Only meaningful once tdl already has a queued task for this
+            # exact link from our own previous attempt this session - on a
+            # fresh first attempt it refers to whatever tdl last queued
+            # (possibly unrelated/stale), which risks it stalling instead
+            # of processing the new -u link at all.
+            cmd.append("--continue")
         if self.config.proxy:
             cmd += ["--proxy", self.config.proxy]
 
@@ -217,4 +219,4 @@ class DownloadEngine:
         if m: total += int(m.group(1)) * 60
         if s: total += int(s.group(1))
         return total
-            
+        
