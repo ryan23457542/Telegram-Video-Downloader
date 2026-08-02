@@ -9,6 +9,7 @@ from config import AppConfig
 from core.resolver import MetadataResolver
 from ui.dashboard import LiveDashboard, DownloadProgress
 from utils.helpers import force_unlock_tdl_database, test_proxy_reachable
+from utils.text import strip_ansi
 from ui.box import Spinner
 
 
@@ -37,6 +38,7 @@ class DownloadEngine:
         self.dashboard = LiveDashboard(self.file_name, self.size_bytes, self.profile)
         self._last_sample_time: float = 0.0
         self._last_sample_bytes: float = 0.0
+        self.last_failure_reason: str = ""
 
     MAX_AUTO_RETRIES = 3
     RETRY_WAIT_SECONDS = 15
@@ -52,6 +54,12 @@ class DownloadEngine:
                 return outcome == "success"
 
             attempt += 1
+            # tdl's own last output line (if any) is a far more useful
+            # signal than a blanket "Connection lost" - that label used to
+            # show up for every failure (bad namespace, private/inaccessible
+            # chat, auth errors, real network drops...) making them
+            # indistinguishable.
+            self.last_failure_reason = self.progress.last_line or "tdl exited with an error"
             if attempt > self.MAX_AUTO_RETRIES:
                 return False
 
@@ -59,7 +67,7 @@ class DownloadEngine:
                 if self.stop_event.is_set():
                     return False
                 self.progress.status_text = (
-                    f"Connection lost - retry {attempt}/{self.MAX_AUTO_RETRIES} in {remaining}s..."
+                    f"{self.last_failure_reason} - retry {attempt}/{self.MAX_AUTO_RETRIES} in {remaining}s..."
                 )
                 self.dashboard.render(self.progress, self.ping_monitor.get_state())
                 time.sleep(1)
@@ -133,6 +141,11 @@ class DownloadEngine:
             else: buffer += char
 
     def _update_progress(self, line: str):
+        clean = strip_ansi(line).strip()
+        if clean and not clean.lower().startswith(("cpu:", "memory:", "goroutines:")):
+            with self.lock:
+                self.progress.last_line = clean[:160]
+
         pct_match = re.search(r"([\d\.]+)%", line)
         if not pct_match:
             return
@@ -200,4 +213,4 @@ class DownloadEngine:
         if m: total += int(m.group(1)) * 60
         if s: total += int(s.group(1))
         return total
-        
+                
